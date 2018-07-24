@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Document</title>
+    <script type="text/javascript" src="static/jquery.js"></script> 
+    <style>
+    #chat_msgs{
+        width: 500px;
+    }
+    body {
+        margin: 0 auto;
+        max-width: 800px;
+        padding: 0 20px;
+    }
+
+    .container {
+        border: 2px solid #dedede;
+        background-color: #f1f1f1;
+        border-radius: 5px;
+        padding: 10px;
+        margin: 10px 0;
+        /*direction: rtl;*/
+    }
+
+    .darker {
+        border-color: #ccc;
+        background-color: #ddd;
+    }
+
+    .container::after {
+        content: "";
+        clear: both;
+        display: table;
+    }
+
+    .time-right {
+        float: right;
+    }
+
+    .time-left {
+        float: left;
+    }
+    #chat_msgs{
+        overflow: auto;
+        max-height: 500px;
+        /*direction: ltr;*/
+    }
+    </style>
+</head>
+<body>
+    <div class="chatbox">
+        <form name="searchText" id="searchText" method="POST">
+            <input type="text" class="input" name="searh_term" id="searh_term">
+            <button type="button" class="js_sub_form">Enter</button>
+        </form>
+    </div>
+    <div class="pub_ids">
+
+    </div>
+    <script type="text/javascript">
+
+        function iterateJSON(idlist, publications) 
+        {
+            if(idlist.length > 0)
+            {
+                var id = idlist.pop();
+                
+                jQuery.getJSON('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esummary.fcgi?db=pubmed&id='+id+'&retmode=json&sort=relevance', function(summary)
+                {
+                    // console.log('summary',summary)
+                    var citation = "";
+                    var authors = "";
+                
+                    for(author in summary.result[id].authors){
+                        authors+=summary.result[id].authors[author].name+', ';
+                    }
+
+                    citation+= '<p> <b>Title</b>: '+summary.result[id].title+'</p>';
+                    citation+= '<p> <b>fulljournalname</b>: '+summary.result[id].fulljournalname+'</p>';
+                    citation+= '<p> <b>authors</b>: '+authors+'</p>';
+                    citation+= '<p> <b>pubdate</b>: '+summary.result[id].pubdate+'</p>';
+                    citation+= '<p> <b>pages</b>: '+summary.result[id].pages+'</p>';
+                    citation+= '<p> <b>id</b>: '+id+'</p>';
+                    citation+= '<p> <a href="pubmedDetail.html?id='+id+'" target="_blank">See Abstract</a></p>';
+                    citation+= '<hr/>';
+
+                    //citation+=' \"'+summary.result[id].title+'\" <i>'+summary.result[id].fulljournalname+'</i> '+summary.result[id].volume+'.'+summary.result[id].issue+' ('+summary.result[id].pubdate+'): '+summary.result[id].pages+'.';
+                    $(".pub_ids").append('<div>'+citation+'</div>');
+                    publications.push(citation);
+                    
+                    if(idlist.length!=0){
+                        iterateJSON(idlist, publications);
+                    }else{
+                        console.log(publications);
+                    }                    
+                });
+            }
+            else{
+                $(".pub_ids").append('<div>No records Found</div>');
+            }
+        }
+                                
+        $('.input').keypress(function (e) {
+            if (e.which == 13) {
+                $('.js_sub_form').click();
+                return false;
+            }
+        });
+
+        $('.js_sub_form').click(function() 
+	    {
+            $(".pub_ids").html('');
+            let searh_term = $("#searh_term").val();
+            //http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term=larschan,erica[author]&retmode=json
+            jQuery.getJSON('http://eutils.ncbi.nlm.nih.gov/entrez/eutils/esearch.fcgi?db=pubmed&term='+searh_term+'&retmode=json', function(data){
+                var ids = data.esearchresult.idlist;
+                var publications = [];
+                iterateJSON(ids, publications);
+            });    
+        });
+
+    </script>
+</body>
+</html>
