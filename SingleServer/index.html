@@ -1,0 +1,345 @@
+<!DOCTYPE html>
+<html>
+	<head>
+		<meta charset="utf-8">
+		<title>Text Summarization</title>
+		<link rel="stylesheet" type="text/css" href="http://unpkg.com/iview/dist/styles/iview.css">
+
+		<script type="text/javascript" src="http://vuejs.org/js/vue.min.js"></script>
+		<script type="text/javascript" src="http://unpkg.com/iview/dist/iview.min.js"></script>
+		<script type="text/javascript" src="http://unpkg.com/iview/dist/locale/en-US.js"></script>
+		<script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.18.0/axios.js"></script>
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/1.9.426/pdf.min.js"></script>
+		
+		<script >
+			iview.lang('en-US');
+			PDFJS.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/1.9.426/pdf.worker.js';
+		</script>  
+	</head>
+	
+	<body>
+
+		<div id="app">
+			<div class="layout">
+				<layout>
+					<i-header>
+						<i-menu mode="horizontal" theme="dark" active-name="1">
+							<div class="layout-logo" style="color: #fff;font-size:30px;">Text&nbsp;Summarization</div>
+							<div class="layout-nav">
+							</div>
+						</i-menu>
+					</i-header>
+					<i-content :style="{padding: '0 50px'}">
+						<breadcrumb :style="{margin: '20px 0'}">
+						</breadcrumb>
+						<card>
+							<div style="min-height: 770px;">
+								<row type="flex" justify="center" class="code-row-bg" style="padding: 20px;">
+									<i-col span="3">
+										<i-select v-model="selection" style="width:200px">
+											<i-option v-for="item in contentTypes" :value="item.value" :key="item.value">{{ item.label }}</i-option>
+										</i-select>
+									</i-col>
+									<i-col span="14">
+										<span v-if="selection === 'url'">
+											<i-input v-model="urlValue" placeholder="Enter URL" style=""></i-input>
+										</span>
+										<span v-if="selection === 'file'">
+											<!-- <i-input v-model="fileValue" placeholder="Enter File" style=""></i-input> -->
+											<input type="file" accept="" style="" @change="handleFileChange">
+										</span>
+										<span v-if="selection === 'content'">
+											<i-input type="textarea" :rows="4" v-model="contentValue" placeholder="Enter Content..." style=""></i-input>
+										</span>
+									</i-col>
+									<i-col span="2">
+										<span style="margin-left:5px;">
+											<i-button type="success" @click="handleSend" :loading="loading">Send</i-button>
+										</span>
+									</i-col>
+								</row>
+								<row style="padding-bottom: 20px;">
+									<i-col span="4">&nbsp;</i-col>
+									<i-col span="14">
+										No of Input Line: 
+										<i-input v-model="defaultLines" placeholder="No of Input Line" style=""></i-input>
+									</i-col>
+								</row>
+								<hr>
+								<row type="flex" justify="center" class="code-row-bg" style="padding: 20px;">
+									<i-col span="16">
+										<strong style="font-size: 16px;">Result:</strong> 
+										<div style="border: 1px solid #eee;border-radius: 4px;">
+											<div style="padding: 10px;">{{result}}	</div>
+											
+
+										</div>
+										<strong style="font-size: 16px;">Word Cloud:</strong> 
+										<div style="border: 1px solid #eee;border-radius: 4px;">
+
+											<div id="vis"></div>
+
+											<form id="form">
+												<p style="position: absolute; right: 0; top: 0" id="status"></p>
+												<div style="text-align: center;" >
+													<div id="presets"></div>
+													<div id="custom-area" style=" display: none;">
+														<p>
+															<label for="text">Paste your text below!</label>
+															<p>
+																<textarea id="text">{{result}}</textarea>
+																<button id="go" type="submit">Go!</button>
+													</div>
+												</div>
+												<hr>
+												<div style="float: right; text-align: right">
+													<p>
+														<label for="max">Number of words:</label>
+														<input type="number" value="250" min="1" id="max">
+														<p>
+															<label for="per-line">
+																<input type="checkbox" id="per-line">One word per line</label>
+															<!--<p><label for="colours">Colours:</label> <a href="#" id="random-palette">get random palette</a>-->
+															<p>
+																<label>Download:</label>
+																<button id="download-svg">SVG</button>
+																<!-- |
+																						<a id="download-png" href="#">PNG</a>-->
+												</div>
+												<div style="float: left">
+													<p>
+														<label>Spiral:</label>
+														<label for="archimedean">
+															<input type="radio" name="spiral" id="archimedean" value="archimedean" checked="checked">Archimedean</label>
+														<label for="rectangular">
+															<input type="radio" name="spiral" id="rectangular" value="rectangular">Rectangular</label>
+														<p>
+															<label for="scale">Scale:</label>
+															<label for="scale-log">
+																<input type="radio" name="scale" id="scale-log" value="log" checked="checked">log n</label>
+															<label for="scale-sqrt">
+																<input type="radio" name="scale" id="scale-sqrt" value="sqrt">√n</label>
+															<label for="scale-linear">
+																<input type="radio" name="scale" id="scale-linear" value="linear">n</label>
+															<p>
+																<label for="font">Font:</label>
+																<input type="text" id="font" value="Impact">
+												</div>
+												<div id="angles">
+													<p>
+														<input type="number" id="angle-count" value="5" min="1">
+														<label for="angle-count">orientations</label>
+														<label for="angle-from">from</label>
+														<input type="number" id="angle-from" value="-60" min="-90" max="90">°
+														<label for="angle-to">to</label>
+														<input type="number" id="angle-to" value="60" min="-90" max="90">°</div>
+											</form>
+											
+										</div>
+									</i-col>
+								</row>
+							</div>
+						</card>
+					</i-content>
+					<i-footer class="layout-footer-center">2011-2018 &copy; Cenacle Research</i-footer>
+				</layout>
+			</div>
+		</div>
+		<script>
+			
+			new Vue({
+				el: '#app',
+				data: {
+					contentTypes: [
+						{
+							value: 'url',
+							label: 'URL'
+						},
+						{
+							value: 'file',
+							label: 'Upload File'
+						},
+						{
+							value: 'content',
+							label: 'Content'
+						}
+					],
+					urlValue: '',
+					contentValue: '',
+					fileValue: '',
+					selection: 'url',
+					defaultLines: 2,
+					result: '',
+					loading: false
+				},
+				methods: {
+					handleSend: function () {
+						this.loading = true
+						let file = '';
+						let sentenceCount = this.defaultLines
+						let Isfile = 'false';
+						let formData = new FormData();
+						if (this.selection === 'url') {
+							file = this.urlValue
+							Isfile = 'false'
+							formData.set('textfield',file);
+							// console.log('URL', urlValue)
+						} else if (this.selection === 'file') {
+							file = this.fileValue
+							Isfile = 'true'
+							formData.set('file',file);
+						} else {
+							file = this.contentValue
+							Isfile = 'true'
+							formData.set('file',file);
+						}
+						console.log('Done:: ',Isfile)
+						// console.log('filre',file)
+						formData.set('Isfile',Isfile);
+						formData.set('sentenceCount', this.defaultLines);
+
+						let url = 'http://0.0.0.0:8082';
+						// let url = "http://" + ((this.selection === 'url') ? '0.0.0.0:8082?textfield=' + file : '0.0.0.0:8082?file=' + file);
+						// url = url + '&sentenceCount=' + this.defaultLines + '&Isfile=' + Isfile;
+						// url = encodeURI(url)
+						console.log('>>>>>', url)
+						axios.post(url, formData, {
+							headers : {
+								'content-type' : 'multipart/form-data'
+							}
+						}).then(res => {
+							this.result = res.data
+							this.$Notice.success({title: 'Success!!'});
+							setTimeout(function() {
+								document.getElementById("go").click();
+							}, 1000)
+							this.loading = false
+						}).catch(err => {
+							console.log(err)
+							this.$Notice.error({title: 'Error!!'});
+							this.loading = false
+						})
+					},
+					handleFileChange (e) {
+						this.fileValue = ''
+						let self = this
+						let files = e.target.files || e.dataTransfer.files
+						console.log(files)
+						if (files.length > 0) {
+							let fname = files[0].name
+							if (files[0].type === 'text/plain') {
+							var reader = new FileReader()
+							reader.onload = (ex) => {
+								// self.fileJson = JSON.parse(e.target.result)
+								this.fileValue = ex.target.result
+								console.log('..........', ex.target.result)
+							}
+							reader.readAsText(e.target.files[0])
+							} else if (files[0].type === 'application/pdf') {
+								var reader = new FileReader()
+								reader.onload = (ex) => {
+									// https://res.cloudinary.com/onlynik/image/upload/v1532168961/compressed.tracemonkey-pldi-09.pdf
+									PDFJS.getDocument({data: ex.target.result}).then(function (pdf) {
+										var pdfDocument = pdf;
+										var pagesPromises = [];
+
+										for (var i = 0; i < pdf.pdfInfo.numPages; i++) {
+											// Required to prevent that i is always the total of pages
+											(function (pageNumber) {
+												pagesPromises.push(self.getPageText(pageNumber, pdfDocument));
+											})(i + 1);
+										}   
+
+										Promise.all(pagesPromises).then(function (pagesText) {
+
+											// Display text of all the pages in the console
+											console.log(pagesText.join(' ').replace(/[^a-zA-Z0-9.,]/g, ' '));
+											let mdata = pagesText.join(' ').replace(/[^a-zA-Z0-9.,;#()]/g, ' ');
+											self.fileValue = mdata
+										});
+
+									}, function (reason) {
+										// PDF loading error
+										console.error(reason);
+									});        		
+								}
+								// reader.readAsBinaryString(e.target.files[0])
+								reader.readAsArrayBuffer(e.target.files[0])
+							} else {
+								alert('Not Allowed File, Only allowed text and pdf File.')
+							}
+						}
+					},
+					getPageText(pageNum, PDFDocumentInstance) {
+						// Return a Promise that is solved once the text of the page is retrieven
+						return new Promise(function (resolve, reject) {
+							PDFDocumentInstance.getPage(pageNum).then(function (pdfPage) {
+								// The main trick to obtain the text of the PDF page, use the getTextContent method
+								pdfPage.getTextContent().then(function (textContent) {
+									var textItems = textContent.items;
+									var finalString = "";
+
+									// Concatenate the string of the item to the final string
+									for (var i = 0; i < textItems.length; i++) {
+										var item = textItems[i];
+
+										finalString += item.str + " ";
+									}
+
+									// Solve promise with the text retrieven from the page
+									resolve(finalString);
+								});
+							});
+						});
+					}
+				}
+			})
+		</script>
+  
+	</body>
+
+	<script src="https://www.jasondavies.com/d3.min.js"></script>
+	<script src="https://www.jasondavies.com/wordcloud/cloud.min.js"></script>
+	<style>
+		.layout{
+			/*border: 1px solid #d7dde4;*/
+			background: #f5f7f9;
+			position: relative;
+			/*border-radius: 4px;*/
+			overflow: hidden;
+		}
+		.layout-logo{
+			width: 100px;
+			height: 30px;
+			/*background: #5b6270;*/
+			border-radius: 3px;
+			float: left;
+			position: relative;
+			top: 0px;
+			left: 20px;
+		}
+		.layout-nav{
+			width: 420px;
+			margin: 0 auto;
+			margin-right: 20px;
+		}
+		.layout-footer-center{
+			text-align: center;
+		}
+		#presets a { border-left: solid #666 1px; padding: 0 10px; }
+		#presets a.first { border-left: none; }
+		#keyword { width: 300px; }
+		#fetcher { width: 500px; }
+		#keyword, #go { font-size: 1.5em; }
+		#text { width: 100%; height: 100px; }
+		p.copy { font-size: small; }
+		/*#form { font-size: small; position: relative; }*/
+		hr { border: none; border-bottom: solid #ccc 1px; }
+		a.active { text-decoration: none; color: #000; font-weight: bold; cursor: text; }
+		#angles line, #angles path, #angles circle { stroke: #666; }
+		#angles text { fill: #333; }
+		#angles path.drag { fill: #666; cursor: move; }
+		#angles { text-align: center; margin: 0 auto; width: 350px; }
+		#angles input, #max { width: 42px; }
+	</style>
+</html>
